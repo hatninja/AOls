@@ -17,9 +17,16 @@ Example room:
 
 return {
 	{
-		name="The Lobby",
+		name="Lobby",
 		desc="",
 		bg="default",
+		music="No Music",
+		kind="lobby",
+	},
+	{
+		name="A Courtroom",
+		desc="",
+		bg="gs4",
 		music="No Music",
 		kind="court",
 	}

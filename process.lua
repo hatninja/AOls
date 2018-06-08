@@ -33,58 +33,6 @@ dofile(path.."settings/features.lua")
 
 --Filters for spam or language.
 local filters = dofile(path.."settings/filters.lua")
---CHANGELOG
---ID's now count up from joined players, not spectators.
---/courts now is more verbose when empty.
---The server can hot reload now.
---Evidence is in testing
---Spam protection added
---Aliases added for /whois and /room that match vanilla commands.
---April Fools surprise planned!
---/rooms now lists all rooms. /courts may be phased out.
-
---CHANGELOG
---/pm added
---/need added
---Characters re-arranged to show vanilla characters first.
---Fixed problem where the same person could join multiple times. Thereby glitching the playercount.
-
---CHANGELOG
---WebAO support.
---Changed mute function
---/trap added.
---/untrap added.
---/players added.
---/need phased out.
---Room leave messages now announce destination.
---Get player counts on /whois
---Phased out /need
---/lock added
---/unlock added
---/muteroom /unmuteroom
---/modlock /modunlock
---Rules changed.
-
---CHANGELOG
---Fixed lag prevention
---Added /nick command
---Users without nicks will automatically be given one. Though rendered useless by the client.
---Added /randomchar command
-
---CHANGELOG
---/diceroll is now /roll
---Made empty /area as same as /areas
---/newcourt removed in favor of /area +
---Non-white text colors ignore color changes.
---/whois is back
---Implement feature locking.
---Implement text-based color changing for web clients.
---Added feature locks for ini-swapping, autocoloring, rainbow text.
---Made a dynamic courtrooms feature lock.
---Background locks added
---/area can find by name now.
---/getareas
---/desk command
 
 --TODO
 --Character analytics
@@ -92,65 +40,7 @@ local filters = dofile(path.."settings/filters.lua")
 --/ignore command
 ----Re-add need with a feature lock.
 --Add ao1 char loading and messages
-
---OOC Command list?
---✅ /pos - Change your position. Accepts full names or shortened.
---✅ /bg - Put in name to find bg and change to it. Without a name, it just gives you the current bg.
-
---✅ /rooms
---✅ /room
-
---✅ /rules
-
---✅ /newcourt (Optional name)
---✅ /courts
-
---✅ /whois (Maybe build in side)
---0 ❌ /side -- get people currently on your side.
---✅ /players -- get player count
-
---✅ /g
---✅ /pm
-
---Court commands:
---✅ /name
---✅ /desc
---✅ /doc
---✅ /status (IDLE, BUILDING, CASING, RUNNING, RECESS, FINISHED)?
-
---0 ❌ /role
---0 ❌ /roles
---2 ✅ /lock 
---✅ /unlock
-
---2 ✅ /switch
-
---1 ✅ /dice
---1 ✅ /coin
-
---[[TO-DO:
-* Migrate every string to text.lua
-
-* User-moderation tools. (I'm thinking a /strike command) or a room-owner (/kick) or (/ownership)
-
-* OOC spam protection.
-
-POLISHING: Spam prevention.
-
-DONE: Courtroom locks
-DONE: Moderation tools.
-DONE: Evidence
-DONE: WT/CE spam protection
-DONE: Music spam protection
-DONE: Stablization. (Prevent rapid messages bug.)
-DONE: Master server advertising.
-DONE: Prevent /g nil messages. Perhaps a help message about how it works.
-DONE: Rather than char checking system, do a pos checking system. No two same characters can be in the same position at once.
-DONE: Update whois to show positions.
-DONE: Courtroom system.
-DONE: Accept with askchaa, not tcp.
-DONE SOMEWHAT: Spam prevention. (Prevent the same client messages again and again if they are too rapid.)
-]]
+--OOC spam prevention
 
 local rooms = dofile(path.."settings/rooms.lua")
 local staticrooms = #rooms
@@ -181,8 +71,6 @@ function initializeroom(i)
 	end
 end
 for i=1,#rooms do initializeroom(i) end
-
---local peopleincourtrooms = 0
 
 local clientcount = 0
 local viewers = {}
@@ -255,18 +143,8 @@ function dosubcommand(socket,sc)
 		end
 		return
 	end
-	--[[
-	Why would this happen?
-	--
-	HI#ms2-prober
-	Received message from unknown client!   ID#ms2#prober   nil     Bad file descriptor
-	--
-	]]
-	
 	
 	--print(table.concat(args,"#"))
-	
-	--Handle commands.
 	
 	--Handshake
 	if args[1] == "HI" then
@@ -338,7 +216,7 @@ function dosubcommand(socket,sc)
 		if client.muted then return end
 			
 		local desk = client.desk or args[2]
-		--if desk ~= "0" and desk ~= "1" and desk ~= "chat" then return end
+		if desk ~= "0" and desk ~= "1" and desk ~= "chat" then return end
 		
 		local pre_emote = args[3]
 		local character = feature_iniswap and args[4] or getcharname(client.charid)
@@ -348,7 +226,7 @@ function dosubcommand(socket,sc)
 		local message = args[6]
 		
 		local side = args[7]
-		--if side ~= "def" and side ~= "pro" and side ~= "jud" and side ~= "wit" and side ~= "hld" and side ~= "hlp" then return end
+		if side ~= "def" and side ~= "pro" and side ~= "jud" and side ~= "wit" and side ~= "hld" and side ~= "hlp" then return end
 		if not client.pos then setnewpos(client,side) end --Reminder: Position is reset when you join a new room.
 		side = client.pos
 		--Check for room pos!
@@ -360,18 +238,19 @@ function dosubcommand(socket,sc)
 		local char_id = client.charid --Ignore args[10]
 		
 		local sfx_delay = tonumber(args[11]) or 0
-		--if not sfx_delay or sfx_delay ~= math.floor(sfx_delay) then return end
+		if not sfx_delay or sfx_delay ~= math.floor(sfx_delay) then return end
 		
 		local shout_modifier = tonumber(args[12]) or 0
-		--if not shout_modifier or shout_modifier ~= math.floor(shout_modifier) then return end
+		if not shout_modifier or shout_modifier ~= math.floor(shout_modifier) then return end
 		
 		local evidence = tonumber(args[13]) or 0
-		--if not evidence or evidence ~= math.floor(evidence) then return end
+		if not evidence or evidence ~= math.floor(evidence) then return end
 		
 		local flip = args[14] --Replace with char_id for 1.x versions
-		--if flip ~= "0" and flip ~= "1" then return end
+		if flip ~= "0" and flip ~= "1" then return end
+		
 		local realization = args[15]
-		--if realization ~= "0" and realization ~= "1" then return end
+		if realization ~= "0" and realization ~= "1" then return end
 		
 		local text_color = tonumber(args[16])
 		if not text_color or text_color < 0 or text_color > 6 then return end
@@ -628,7 +507,8 @@ end
 
 function CT(client, name,message)
 	local socket = client.socket
-	--if not name:find("[a-zA-Z]") then botmessage(socket,text.OOCnoletters);return end
+	if not name:find("[a-zA-Z]") then botmessage(socket,text.OOCnoletters);return end
+	
 	if #name > oocmaxnamelength then botmessage(socket,string.format(text.OOClongname,oocmaxnamelength));return end
 	if #message > oocmaxlength then
 		botmessage(socket,string.format(text.OOClongmsg,oocmaxlength))
@@ -696,34 +576,7 @@ function CTcommand(client, name,message) --Return true to say that the command w
 			return true
 		end
 	end
-	--[[if args[1] == "/areas" then
-		local msg = text.roomlistheader.."\n"
-		for i=1, #rooms do local v = rooms[i]
-			if i <= staticrooms then
-				msg = msg .. i ..": "..v.name
-			else
-				msg = msg ..i..": \""..v.name.."\""
-			end
-			msg = msg .." "
-			if v.lock then
-				msg = msg .."[Lock]"
-			end
-			if v.modlock then
-				msg = msg .."[Mods]"
-			end
-			if v.kind == "court" then
-				msg = msg .."["..v.status.."]"
-			end
-			msg = msg .." ("..v.count..")"
-			msg = msg.."\n"
-		end
-		if feature_dynamicrooms then
-			msg = msg.."+: (New Courtroom)"
-		end
-		
-		botmessage(client.socket,msg)
-		return true
-	end]]
+	
 	if args[1] == "/area" or args[1] == "/areas" then
 		if client.trapped then return false end
 		if args[2] then
@@ -855,23 +708,6 @@ function CTcommand(client, name,message) --Return true to say that the command w
 		botmessage(client.socket,clientcount.." players online.")
 		return true
 	end
-	
-	--[[if args[1] == "/newcourt" then
-		local name = message:sub(11,-1)
-		if name == "" then name = nil end
-		
-		local newroomid = #rooms+1
-		rooms[newroomid] = {
-			name = name or "A courtroom",
-			desc = nil,
-			bg=backgrounds[math.random(1,#backgrounds)],
-			music="No Music",
-			kind="court",
-		}
-		initializeroom(newroomid)
-		joinroom(client,newroomid)
-		return true
-	end]]
 
 	if not client.muted and args[1] == "/g" then
 		if args[2] then
@@ -1088,7 +924,6 @@ function CTcommand(client, name,message) --Return true to say that the command w
 		end
 		
 	end
-	
 	
 	--Moderator tools
 	if args[1] == "/modpass" then
@@ -1336,12 +1171,8 @@ function joinroom(client,roomid,r)
 			buffersend(client.socket,"HP#1#10#%HP#2#10#%")
 		end
 		listevidence(client)
-		--if room.lm and room.lmt then buffersend(client.socket,room.lm) end
-		
+
 		broadcastroom(room,"CT#"..escapeChat(serverooc).."#"..escapeChat("["..client.id.."] "..reason).."#%")
-		--print(client.id,"Joined room: ",roomid)
-		
-		--if room.id > staticrooms then peopleincourtrooms = peopleincourtrooms + 1 end
 		return true
 	else
 		botmessage(client.socket,text.invalidroom)
@@ -1351,8 +1182,6 @@ end
 function leaveroom(client,message)
 	local msg = message or "left this room."
 	if client.room then
-		--if client.room.id and client.room.id > staticrooms then peopleincourtrooms = peopleincourtrooms - 1 end
-		
 		client.pos = nil
 		
 		local room = client.room
