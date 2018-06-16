@@ -93,7 +93,7 @@ function doaccept(socket)
 		if not isbanned then
 			buffersend(socket,"decryptor#34#%")
 			buffersend(socket,"HI#AOls#beta#%")
-			buffersend(socket,"ID#"..firstempty(clients).."#AOls#"..servver.."#%")
+			buffersend(socket,"ID#"..firstempty(clients).."#AOls#beta#%")
 			buffersend(socket,"PN#"..clientcount.."#"..maxplayers.."#%")
 		else
 			doclosed(socket)
@@ -135,7 +135,7 @@ function dosubcommand(socket,sc)
 	
 	local args = string.split(subcommand,"#")
 	
-	if #args[1] > 2 and args[1] ~= "askchaa" then args[1] = decryptStr(hexToString(args[1]), 5) end
+	if #args[1] == 4 then args[1] = decryptStr(hexToString(args[1]), 5) end
 	
 	if not client then
 		if args[2] ~= "ms2" then --Ignore ms2 prober's second message.
@@ -144,19 +144,17 @@ function dosubcommand(socket,sc)
 		return
 	end
 	
+	--print(subcommand)
 	--print(table.concat(args,"#"))
 	
 	--Handshake
 	if args[1] == "HI" then
 		client.hardwareid = args[2]
-	--	print("Client["..client.id.."] Hardware id is: "..args[2])
 		buffersend(socket,"FL#yellowtext#customobjections#flipping#fastloading#deskmod#noencryption#%")
 	end
-	if args[1] == "ID" then
-		client.software = args[2]
-	end
+	if args[1] == "ID" then client.software = args[2] end
 	
-	--Loading 2.0
+	--Start join
 	if args[1] == "askchaa" and not client.id then --Id is added when the client sends this message, so this will prevent accidental extra joins.
 		local id = firstempty(clients)
 		
@@ -170,10 +168,14 @@ function dosubcommand(socket,sc)
 		viewers[socket] = nil
 		
 		client.id = id
-	elseif args[1] == "RC" then buffersend(socket,"SC#"..SC.."%")
+	end
+	--Loading 2.0
+	if args[1] == "RC" then buffersend(socket,"SC#"..SC.."%")
 	elseif args[1] == "RM" then buffersend(socket,"SM#"..SM.."%")
-	elseif args[1] == "RD" then
-		buffersend(socket,"CharsCheck#"..CharsCheck.."%")
+	end
+	--End of loading.
+	if args[1] == "RD" then
+		--buffersend(socket,"CharsCheck#"..CharsCheck.."%")
 		buffersend(socket,"DONE#%")
 		
 		if text.motd then
@@ -186,6 +188,7 @@ function dosubcommand(socket,sc)
 		
 		clientcount=clientcount+1
 	end
+
 	
 	--Keep clients updated.
 	if args[1] == "CH" then buffersend(socket,"CHECK#%") end
@@ -401,7 +404,7 @@ function dosubcommand(socket,sc)
 	
 	--Evidence
 	if client.room and client.room.kind == "court" and not client.muted then
-		if args[1] == "PE" then --Add
+		if args[1] == "PE" and #client.room.evidence < maxevidence then --Add
 			table.insert(client.room.evidence,{"name","description",args[4]})
 			listevidence(client,true)
 		elseif args[1] == "DE" then --Delete
@@ -497,7 +500,7 @@ function doupdate(dt)
 	end
 	for k,v in pairs(viewers) do
 		if os.time() > v.viewtime+60 then
-			if v.ip ~= mservip then --Keep connection with masterserver, i think this may work with WebAO...
+			if v.ip ~= mservip then
 				doclosed(v.socket)
 				--print("Client["..i.."] timed out viewing the server!")
 			end
@@ -583,7 +586,7 @@ function CTcommand(client, name,message) --Return true to say that the command w
 			if tonumber(args[2]) then
 				local room = rooms[tonumber(args[2])]
 				if room then
-					if not room.lock or room.lock == args[3] or client.mod and not botmessage(client.socket,"Warning: Entering a locked room!") then
+					if not room.lock or room.lock == args[3] then
 						if not room.modlock or room.modlock and client.mod then
 							joinroom(client,tonumber(args[2]))
 							botmessage(client.socket,text.joiningheader.."\n"..string.format(text.changedroom,client.room.name))
@@ -619,7 +622,7 @@ function CTcommand(client, name,message) --Return true to say that the command w
 				if search ~= "" then
 					local found = false
 					for i=1,#rooms do local v = rooms[i]
-						if string.lower(v.name):find(search) and not v.modlock or v.modlock and client.mod then
+						if string.lower(v.name):find(search) and not v.lock and (not v.modlock or v.modlock and client.mod) then
 							joinroom(client,i)
 							botmessage(client.socket,text.joiningheader.."\n"..string.format(text.changedroom,client.room.name))
 							if client.room.desc then
@@ -646,7 +649,7 @@ function CTcommand(client, name,message) --Return true to say that the command w
 				end
 				msg = msg .." "
 				if v.lock then
-					msg = msg .."[Lock]"
+					msg = msg .."[Pass]"
 				end
 				if v.modlock then
 					msg = msg .."[Mods]"
@@ -658,7 +661,7 @@ function CTcommand(client, name,message) --Return true to say that the command w
 				msg = msg.."\n"
 			end
 			if feature_dynamicrooms then
-				msg = msg.."+: (New Courtroom)"
+				msg = msg.."+: (Make Courtroom)"
 			end
 			
 			botmessage(client.socket,msg)
@@ -813,7 +816,7 @@ function CTcommand(client, name,message) --Return true to say that the command w
 	end
 	
 	if args[1] == "/bg" then
-		if not client.room.bglock then
+		if not client.room.bglock or client.mod then
 			for i,v in ipairs(backgrounds) do
 				if string.lower(v) == string.lower(args[2]) then
 					if client.room.kind ~= "echo" then
@@ -1168,7 +1171,7 @@ function joinroom(client,roomid,r)
 			buffersend(client.socket,"HP#1#"..room.hp[1].."#%")
 			buffersend(client.socket,"HP#2#"..room.hp[2].."#%")
 		else
-			buffersend(client.socket,"HP#1#10#%HP#2#10#%")
+			buffersend(client.socket,"HP#1#0#%HP#2#0#%")
 		end
 		listevidence(client)
 
@@ -1226,10 +1229,7 @@ function spamcheck(client,message)
 		end
 	end
 	if result then
-		client.spamcounter = client.spamcounter + 4 --Three times, then they're out!
-	end
-	if result then
-		print("Client["..client.id.."] got "..result.."d because their message failed to pass server filters.")
+		client.spamcounter = client.spamcounter + 5
 		return true
 	end
 end
